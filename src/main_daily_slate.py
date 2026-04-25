@@ -24,8 +24,11 @@ def main() -> None:
         return
 
     rows = [build_report_row(date_string, game) for game in slate_games]
-    append_daily_slate_rows(rows)
-    print(f"Wrote {len(rows)} NHL matchup rows to Google Sheets.")
+    result = append_daily_slate_rows(rows)
+    print(
+        f"Wrote {result.written_count} new NHL matchup rows to Google Sheets. "
+        f"Skipped {result.duplicate_count} duplicates."
+    )
 
 
 def build_report_row(date_string: str, game: SlateGame) -> list[str | int | float]:
