@@ -9,7 +9,7 @@ from typing import Any
 
 from dotenv import load_dotenv
 
-from src.sheets.client import append_values, get_values
+from src.sheets.client import append_values, get_values, update_values
 from src.sheets.schemas import DAILY_SLATE_COLUMNS
 
 
@@ -33,11 +33,11 @@ def append_daily_slate_rows(
 ) -> DailySlateWriteResult:
     """Append new Daily_Slate rows, skipping duplicates."""
     load_dotenv()
-    range_name = os.getenv("GOOGLE_SHEETS_APPEND_RANGE", "Daily_Slate!A:Y")
-    existing_rows = get_values("Daily_Slate!A:Y")
+    range_name = os.getenv("GOOGLE_SHEETS_APPEND_RANGE", "Daily_Slate!A:AD")
+    existing_rows = get_values("Daily_Slate!A:AD")
+    ensure_daily_slate_headers()
 
     if not existing_rows:
-        append_values(range_name, [DAILY_SLATE_COLUMNS])
         existing_rows = [DAILY_SLATE_COLUMNS]
 
     existing_keys = _row_keys(_data_rows(existing_rows))
@@ -59,6 +59,20 @@ def append_daily_slate_rows(
         written_count=len(new_rows),
         duplicate_count=duplicate_count,
     )
+
+
+def ensure_daily_slate_headers() -> None:
+    """Ensure row 1 matches the Daily_Slate schema."""
+    header_range = "Daily_Slate!A1:AD1"
+    header_rows = get_values(header_range)
+    current_header = header_rows[0] if header_rows else []
+    if _headers_match(current_header):
+        return
+    update_values(header_range, [DAILY_SLATE_COLUMNS])
+
+
+def _headers_match(header_row: list[Any]) -> bool:
+    return [str(value).strip() for value in header_row] == DAILY_SLATE_COLUMNS
 
 
 def _row_keys(rows: list[list[Any]]) -> set[tuple[str, str, str]]:

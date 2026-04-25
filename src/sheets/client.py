@@ -70,3 +70,23 @@ def append_values(
         .execute()
     )
     return result
+
+
+def update_values(
+    range_name: str,
+    values: list[list[str | int | float]],
+) -> dict[str, Any]:
+    """Update values in the configured spreadsheet."""
+    service = get_sheets_service()
+    result = (
+        service.spreadsheets()
+        .values()
+        .update(
+            spreadsheetId=get_spreadsheet_id(),
+            range=range_name,
+            valueInputOption="USER_ENTERED",
+            body={"values": values},
+        )
+        .execute()
+    )
+    return result

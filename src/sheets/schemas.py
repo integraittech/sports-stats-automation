@@ -32,6 +32,11 @@ DAILY_SLATE_COLUMNS = [
     "Home 1P Over 1.5 %",
     "Home 0-Goal First Periods",
     "Home 2+ Goal First Periods",
+    "My Pick",
+    "Pick Type",
+    "In Parlay",
+    "Result",
+    "Notes",
 ]
 
 
@@ -69,4 +74,9 @@ def build_daily_slate_row(
         round(home_stats.first_period_over_1_5_percentage, 1),
         home_stats.first_period_zero_goal_count,
         home_stats.first_period_two_plus_goal_count,
+        "",
+        "",
+        "",
+        "",
+        "",
     ]
