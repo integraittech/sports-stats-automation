@@ -15,3 +15,10 @@ def append_test_row() -> dict[str, Any]:
     load_dotenv()
     range_name = os.getenv("GOOGLE_SHEETS_APPEND_RANGE", "Daily_Slate!A:B")
     return append_values(range_name, [["TEST", "It works"]])
+
+
+def append_daily_slate_rows(rows: list[list[str | int | float]]) -> dict[str, Any]:
+    """Append structured Daily_Slate rows to the configured Google Sheet."""
+    load_dotenv()
+    range_name = os.getenv("GOOGLE_SHEETS_APPEND_RANGE", "Daily_Slate!A:Y")
+    return append_values(range_name, rows)
