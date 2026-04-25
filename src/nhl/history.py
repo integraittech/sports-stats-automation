@@ -5,17 +5,20 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from src.nhl.api_client import get_club_schedule_now
+from src.nhl.api_client import get_club_schedule_now, get_game_play_by_play
 
 
 @dataclass(frozen=True)
 class TeamGameResult:
     """A completed game result for one team."""
 
+    game_id: int
     game_date: str
     opponent: str
     team_score: int
     opponent_score: int
+    first_period_team_score: int
+    first_period_opponent_score: int
 
 
 def get_last_completed_games(team_abbrev: str, limit: int = 5) -> list[TeamGameResult]:
@@ -56,13 +59,46 @@ def _to_result(game: dict[str, Any], team_abbrev: str) -> TeamGameResult:
 
     team = away_team if is_away else home_team
     opponent = home_team if is_away else away_team
+    game_id = game["id"]
+    first_period_scores = _first_period_scores(
+        game_id=game_id,
+        team_id=team.get("id"),
+        opponent_id=opponent.get("id"),
+    )
 
     return TeamGameResult(
+        game_id=game_id,
         game_date=game.get("gameDate", "Unknown"),
         opponent=_team_name(opponent),
         team_score=team.get("score", 0),
         opponent_score=opponent.get("score", 0),
+        first_period_team_score=first_period_scores[0],
+        first_period_opponent_score=first_period_scores[1],
     )
+
+
+def _first_period_scores(
+    game_id: int,
+    team_id: int | None,
+    opponent_id: int | None,
+) -> tuple[int, int]:
+    play_by_play = get_game_play_by_play(game_id)
+    team_goals = 0
+    opponent_goals = 0
+
+    for play in play_by_play.get("plays", []):
+        if play.get("typeDescKey") != "goal":
+            continue
+        if play.get("periodDescriptor", {}).get("number") != 1:
+            continue
+
+        scoring_team_id = play.get("details", {}).get("eventOwnerTeamId")
+        if scoring_team_id == team_id:
+            team_goals += 1
+        elif scoring_team_id == opponent_id:
+            opponent_goals += 1
+
+    return team_goals, opponent_goals
 
 
 def _team_name(team: dict[str, Any]) -> str:
