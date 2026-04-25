@@ -1,0 +1,20 @@
+# Default non-secret settings for the NHL MVP.
+# Secrets and account-specific values should live in .env.
+
+sport: nhl
+timezone: America/Vancouver
+
+research_windows:
+  head_to_head_games: 10
+  team_recent_games: 5
+  team_extended_games: 10
+
+markets:
+  first_period_total: 1.5
+  full_game_total: 5.5
+
+sheets:
+  daily_slate_tab: Daily_Slate
+  raw_games_tab: Raw_Games
+  picks_tab: Picks
+  manual_review_tab: Manual_Review
