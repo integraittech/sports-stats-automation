@@ -1,12 +1,16 @@
-"""Print today's NHL slate to the console."""
+"""Print one team's recent completed NHL games to the console."""
 
-from src.nhl.slate import get_today_slate, print_slate
+from src.nhl.history import get_last_completed_games, print_team_history
+
+
+TEAM_ABBREV = "EDM"
+TEAM_NAME = "Edmonton Oilers"
 
 
 def main() -> None:
-    """Fetch today's NHL games and print a simple slate."""
-    games = get_today_slate()
-    print_slate(games)
+    """Fetch Edmonton's last five completed games and print basic results."""
+    games = get_last_completed_games(TEAM_ABBREV)
+    print_team_history(TEAM_NAME, games)
 
 
 if __name__ == "__main__":

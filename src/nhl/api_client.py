@@ -24,3 +24,11 @@ def get_schedule(date_string: str) -> dict[str, Any]:
     response = requests.get(url, timeout=20)
     response.raise_for_status()
     return response.json()
+
+
+def get_club_schedule_now(team_abbrev: str) -> dict[str, Any]:
+    """Fetch the current season schedule for one NHL team."""
+    url = f"{get_base_url()}/v1/club-schedule-season/{team_abbrev}/now"
+    response = requests.get(url, timeout=20)
+    response.raise_for_status()
+    return response.json()
