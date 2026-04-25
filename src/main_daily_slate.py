@@ -1,13 +1,12 @@
-"""Append a simple Google Sheets connection test row."""
+"""Print today's NHL slate to the console."""
 
-from src.sheets.writer import append_test_row
+from src.nhl.slate import get_today_slate, print_slate
 
 
 def main() -> None:
-    """Write one test row to Google Sheets."""
-    result = append_test_row()
-    updated_cells = result.get("updates", {}).get("updatedCells", 0)
-    print(f"Google Sheets test row appended. Updated cells: {updated_cells}")
+    """Fetch today's NHL games and print a simple slate."""
+    games = get_today_slate()
+    print_slate(games)
 
 
 if __name__ == "__main__":
