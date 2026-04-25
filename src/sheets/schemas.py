@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from datetime import date, datetime, timedelta
+from typing import Any
+
 from src.nhl.calculations import HeadToHeadStats, TeamRecentStats
 from src.nhl.slate import SlateGame
 
@@ -38,6 +41,35 @@ DAILY_SLATE_COLUMNS = [
     "Result",
     "Notes",
 ]
+
+BETS_COLUMNS = [
+    "Date",
+    "Game",
+    "Team",
+    "Bet Type",
+    "Pick",
+    "Line",
+    "Odds",
+    "Stake",
+    "In Parlay",
+    "Parlay ID",
+    "Result",
+    "Notes",
+    "Profit/Loss",
+    "Parlay Result",
+    "Parlay Profit/Loss",
+    "GPT Pick",
+    "GPT Result",
+    "GPT Profit/Loss",
+]
+
+DATE_COLUMN_INDEX = 0
+AWAY_TEAM_COLUMN_INDEX = 1
+HOME_TEAM_COLUMN_INDEX = 2
+MY_PICK_COLUMN_INDEX = 25
+PICK_TYPE_COLUMN_INDEX = 26
+RESULT_COLUMN_INDEX = 28
+RESULT_COLUMN_LETTER = "AC"
 
 
 def build_daily_slate_row(
@@ -80,3 +112,33 @@ def build_daily_slate_row(
         "",
         "",
     ]
+
+
+def normalize_sheet_date(value: Any) -> str:
+    """Normalize Google Sheets date values to YYYY-MM-DD."""
+    if isinstance(value, date):
+        return value.isoformat()
+
+    text = str(value).strip()
+    if _looks_like_iso_date(text):
+        return text[:10]
+    if _looks_like_number(text):
+        google_epoch = datetime(1899, 12, 30)
+        return (google_epoch + timedelta(days=float(text))).date().isoformat()
+    return text
+
+
+def _looks_like_iso_date(value: str) -> bool:
+    try:
+        datetime.strptime(value[:10], "%Y-%m-%d")
+    except ValueError:
+        return False
+    return True
+
+
+def _looks_like_number(value: str) -> bool:
+    try:
+        float(value)
+    except ValueError:
+        return False
+    return True
