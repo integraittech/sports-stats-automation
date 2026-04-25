@@ -1,32 +1,25 @@
-"""Print recent stats for both teams in one hardcoded NHL matchup."""
+"""Print head-to-head stats for one hardcoded NHL matchup."""
 
-from src.nhl.calculations import calculate_recent_team_stats, print_recent_team_stats
-from src.nhl.history import get_last_completed_games, print_team_history
-
-
-MATCHUP = (
-    ("EDM", "Edmonton Oilers"),
-    ("ANA", "Anaheim Ducks"),
+from src.nhl.calculations import (
+    calculate_head_to_head_stats,
+    print_head_to_head_stats,
 )
+from src.nhl.history import get_last_head_to_head_games, print_head_to_head_history
+
+
+AWAY_TEAM_ABBREV = "EDM"
+HOME_TEAM_ABBREV = "ANA"
+MATCHUP_NAME = "Edmonton Oilers at Anaheim Ducks"
 
 
 def main() -> None:
-    """Fetch and print last-five summaries for both matchup teams."""
-    print("Matchup: Edmonton Oilers at Anaheim Ducks")
-    for team_abbrev, team_name in MATCHUP:
-        print("")
-        print("=" * 48)
-        print(team_name)
-        print("=" * 48)
-        print_team_report(team_abbrev, team_name)
-
-
-def print_team_report(team_abbrev: str, team_name: str) -> None:
-    """Print recent games and summaries for one team."""
-    games = get_last_completed_games(team_abbrev)
-    print_team_history(team_name, games)
-    stats = calculate_recent_team_stats(games)
-    print_recent_team_stats(stats)
+    """Fetch and print last-10 head-to-head stats for one matchup."""
+    print(f"Matchup: {MATCHUP_NAME}")
+    games = get_last_head_to_head_games(AWAY_TEAM_ABBREV, HOME_TEAM_ABBREV)
+    print("")
+    print_head_to_head_history(games)
+    stats = calculate_head_to_head_stats(games)
+    print_head_to_head_stats(stats)
 
 
 if __name__ == "__main__":

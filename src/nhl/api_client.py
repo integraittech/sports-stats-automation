@@ -34,6 +34,14 @@ def get_club_schedule_now(team_abbrev: str) -> dict[str, Any]:
     return response.json()
 
 
+def get_club_schedule_season(team_abbrev: str, season: int) -> dict[str, Any]:
+    """Fetch one season schedule for one NHL team."""
+    url = f"{get_base_url()}/v1/club-schedule-season/{team_abbrev}/{season}"
+    response = requests.get(url, timeout=20)
+    response.raise_for_status()
+    return response.json()
+
+
 def get_game_play_by_play(game_id: int) -> dict[str, Any]:
     """Fetch play-by-play data for one NHL game."""
     url = f"{get_base_url()}/v1/gamecenter/{game_id}/play-by-play"

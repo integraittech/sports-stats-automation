@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from src.nhl.history import TeamGameResult
+from src.nhl.history import H2HGameResult, TeamGameResult
 
 
 @dataclass(frozen=True)
@@ -28,6 +28,17 @@ class TeamRecentStats:
     first_period_over_1_5_percentage: float
     first_period_zero_goal_count: int
     first_period_two_plus_goal_count: int
+
+
+@dataclass(frozen=True)
+class HeadToHeadStats:
+    """Summary stats for recent head-to-head games."""
+
+    games_played: int
+    first_period_over_1_5_count: int
+    first_period_over_1_5_percentage: float
+    full_game_over_5_5_count: int
+    full_game_over_5_5_percentage: float
 
 
 def calculate_recent_team_stats(games: list[TeamGameResult]) -> TeamRecentStats:
@@ -104,6 +115,40 @@ def calculate_recent_team_stats(games: list[TeamGameResult]) -> TeamRecentStats:
     )
 
 
+def calculate_head_to_head_stats(games: list[H2HGameResult]) -> HeadToHeadStats:
+    """Calculate first-period and full-game totals from H2H games."""
+    games_played = len(games)
+    first_period_over_1_5_count = sum(
+        1 for game in games
+        if game.first_period_total > 1.5
+    )
+    full_game_over_5_5_count = sum(
+        1 for game in games
+        if game.full_game_total > 5.5
+    )
+
+    if games_played == 0:
+        return HeadToHeadStats(
+            games_played=0,
+            first_period_over_1_5_count=0,
+            first_period_over_1_5_percentage=0,
+            full_game_over_5_5_count=0,
+            full_game_over_5_5_percentage=0,
+        )
+
+    return HeadToHeadStats(
+        games_played=games_played,
+        first_period_over_1_5_count=first_period_over_1_5_count,
+        first_period_over_1_5_percentage=(
+            first_period_over_1_5_count / games_played
+        ) * 100,
+        full_game_over_5_5_count=full_game_over_5_5_count,
+        full_game_over_5_5_percentage=(
+            full_game_over_5_5_count / games_played
+        ) * 100,
+    )
+
+
 def print_recent_team_stats(stats: TeamRecentStats) -> None:
     """Print basic scoring stats for recent completed games."""
     print("")
@@ -146,4 +191,23 @@ def print_recent_team_stats(stats: TeamRecentStats) -> None:
     print(
         "Games with 2+ total first-period goals: "
         f"{stats.first_period_two_plus_goal_count}"
+    )
+
+
+def print_head_to_head_stats(stats: HeadToHeadStats) -> None:
+    """Print H2H first-period and full-game totals summary."""
+    print("")
+    print("Head-to-head summary:")
+    print(
+        "Games over 1.5 first-period goals: "
+        f"{stats.first_period_over_1_5_count}"
+    )
+    print(
+        "First-period over 1.5 percentage: "
+        f"{stats.first_period_over_1_5_percentage:.1f}%"
+    )
+    print(f"Games over 5.5 full-game goals: {stats.full_game_over_5_5_count}")
+    print(
+        "Full-game over 5.5 percentage: "
+        f"{stats.full_game_over_5_5_percentage:.1f}%"
     )
