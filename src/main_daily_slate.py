@@ -1,4 +1,4 @@
-"""Print one compact report for a hardcoded NHL matchup."""
+"""Print compact NHL matchup reports for today's slate."""
 
 from src.nhl.calculations import (
     calculate_head_to_head_stats,
@@ -10,42 +10,64 @@ from src.nhl.history import (
     get_last_completed_games,
     get_last_head_to_head_games,
 )
-
-
-AWAY_TEAM_ABBREV = "EDM"
-AWAY_TEAM_NAME = "Edmonton Oilers"
-HOME_TEAM_ABBREV = "ANA"
-HOME_TEAM_NAME = "Anaheim Ducks"
-MATCHUP_NAME = "Edmonton Oilers at Anaheim Ducks"
+from src.nhl.slate import SlateGame, get_today_slate
 
 
 def main() -> None:
-    """Fetch and print one compact matchup report."""
-    h2h_games = get_last_head_to_head_games(AWAY_TEAM_ABBREV, HOME_TEAM_ABBREV)
-    away_games = get_last_completed_games(AWAY_TEAM_ABBREV)
-    home_games = get_last_completed_games(HOME_TEAM_ABBREV)
+    """Fetch today's NHL slate and print one compact report per game."""
+    slate_games = get_today_slate()
+    if not slate_games:
+        print("No NHL games found for today.")
+        return
+
+    for index, game in enumerate(slate_games):
+        if index:
+            print("")
+            print("-" * 64)
+            print("")
+        print_report_for_game(game)
+
+
+def print_report_for_game(game: SlateGame) -> None:
+    """Fetch stats and print one compact matchup report."""
+    h2h_games = get_last_head_to_head_games(
+        game.away_team_abbrev,
+        game.home_team_abbrev,
+    )
+    away_games = get_last_completed_games(game.away_team_abbrev)
+    home_games = get_last_completed_games(game.home_team_abbrev)
 
     h2h_stats = calculate_head_to_head_stats(h2h_games)
     away_stats = calculate_recent_team_stats(away_games)
     home_stats = calculate_recent_team_stats(home_games)
 
-    print_matchup_report(h2h_stats, away_stats, home_stats)
+    print_matchup_report(
+        matchup_name=f"{game.away_team} at {game.home_team}",
+        away_team_name=game.away_team,
+        home_team_name=game.home_team,
+        h2h_stats=h2h_stats,
+        away_stats=away_stats,
+        home_stats=home_stats,
+    )
 
 
 def print_matchup_report(
+    matchup_name: str,
+    away_team_name: str,
+    home_team_name: str,
     h2h_stats: HeadToHeadStats,
     away_stats: TeamRecentStats,
     home_stats: TeamRecentStats,
 ) -> None:
     """Print a clean matchup report without detailed game rows."""
-    print(MATCHUP_NAME)
-    print("=" * len(MATCHUP_NAME))
+    print(matchup_name)
+    print("=" * len(matchup_name))
     print("")
     print_h2h_summary(h2h_stats)
     print("")
-    print_team_summary(AWAY_TEAM_NAME, away_stats)
+    print_team_summary(away_team_name, away_stats)
     print("")
-    print_team_summary(HOME_TEAM_NAME, home_stats)
+    print_team_summary(home_team_name, home_stats)
 
 
 def print_h2h_summary(stats: HeadToHeadStats) -> None:

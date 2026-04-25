@@ -18,7 +18,9 @@ class SlateGame:
     """A single NHL game in the daily slate."""
 
     game_id: int
+    away_team_abbrev: str
     away_team: str
+    home_team_abbrev: str
     home_team: str
     start_time: str
 
@@ -56,7 +58,9 @@ def normalize_schedule(schedule: dict[str, Any], date_string: str) -> list[Slate
         slate_games.append(
             SlateGame(
                 game_id=game["id"],
+                away_team_abbrev=game.get("awayTeam", {}).get("abbrev", ""),
                 away_team=_team_name(game.get("awayTeam", {})),
+                home_team_abbrev=game.get("homeTeam", {}).get("abbrev", ""),
                 home_team=_team_name(game.get("homeTeam", {})),
                 start_time=game.get("startTimeUTC", "TBD"),
             )
