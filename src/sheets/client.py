@@ -36,7 +36,25 @@ def get_sheets_service() -> Any:
     return build("sheets", "v4", credentials=credentials)
 
 
-def append_values(range_name: str, values: list[list[str]]) -> dict[str, Any]:
+def get_values(range_name: str) -> list[list[Any]]:
+    """Read values from the configured spreadsheet."""
+    service = get_sheets_service()
+    result = (
+        service.spreadsheets()
+        .values()
+        .get(
+            spreadsheetId=get_spreadsheet_id(),
+            range=range_name,
+        )
+        .execute()
+    )
+    return result.get("values", [])
+
+
+def append_values(
+    range_name: str,
+    values: list[list[str | int | float]],
+) -> dict[str, Any]:
     """Append rows to the configured spreadsheet."""
     service = get_sheets_service()
     result = (

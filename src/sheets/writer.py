@@ -7,7 +7,8 @@ from typing import Any
 
 from dotenv import load_dotenv
 
-from src.sheets.client import append_values
+from src.sheets.client import append_values, get_values
+from src.sheets.schemas import DAILY_SLATE_COLUMNS
 
 
 def append_test_row() -> dict[str, Any]:
@@ -18,7 +19,14 @@ def append_test_row() -> dict[str, Any]:
 
 
 def append_daily_slate_rows(rows: list[list[str | int | float]]) -> dict[str, Any]:
-    """Append structured Daily_Slate rows to the configured Google Sheet."""
+    """Append Daily_Slate rows, adding headers first if the sheet is empty."""
     load_dotenv()
     range_name = os.getenv("GOOGLE_SHEETS_APPEND_RANGE", "Daily_Slate!A:Y")
+    if _is_sheet_empty("Daily_Slate!A1:Y1"):
+        append_values(range_name, [DAILY_SLATE_COLUMNS])
     return append_values(range_name, rows)
+
+
+def _is_sheet_empty(header_range: str) -> bool:
+    values = get_values(header_range)
+    return not values
