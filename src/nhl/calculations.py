@@ -14,9 +14,13 @@ class TeamRecentStats:
     games_played: int
     total_goals_for: int
     total_goals_against: int
+    total_goals: int
     average_goals_for: float
     average_goals_against: float
     average_total_goals: float
+    wins: int
+    losses: int
+    record: str
     over_5_5_count: int
     over_5_5_percentage: float
     first_period_goals_for: int
@@ -26,6 +30,7 @@ class TeamRecentStats:
     average_first_period_total_goals: float
     first_period_over_1_5_count: int
     first_period_over_1_5_percentage: float
+    first_period_exactly_1_count: int
     first_period_zero_goal_count: int
     first_period_two_plus_goal_count: int
 
@@ -39,6 +44,8 @@ class HeadToHeadStats:
     first_period_over_1_5_percentage: float
     full_game_over_5_5_count: int
     full_game_over_5_5_percentage: float
+    last_h2h_first_period_score: str
+    last_h2h_full_game_score: str
 
 
 def calculate_recent_team_stats(games: list[TeamGameResult]) -> TeamRecentStats:
@@ -47,6 +54,8 @@ def calculate_recent_team_stats(games: list[TeamGameResult]) -> TeamRecentStats:
     total_goals_for = sum(game.team_score for game in games)
     total_goals_against = sum(game.opponent_score for game in games)
     total_goals = total_goals_for + total_goals_against
+    wins = sum(1 for game in games if game.team_score > game.opponent_score)
+    losses = sum(1 for game in games if game.team_score < game.opponent_score)
     over_5_5_count = sum(
         1 for game in games
         if game.team_score + game.opponent_score > 5.5
@@ -59,6 +68,11 @@ def calculate_recent_team_stats(games: list[TeamGameResult]) -> TeamRecentStats:
     first_period_over_1_5_count = sum(
         1 for game in games
         if game.first_period_team_score + game.first_period_opponent_score > 1.5
+    )
+    first_period_exactly_1_count = sum(
+        1
+        for game in games
+        if game.first_period_team_score + game.first_period_opponent_score == 1
     )
     first_period_zero_goal_count = sum(
         1 for game in games
@@ -74,9 +88,13 @@ def calculate_recent_team_stats(games: list[TeamGameResult]) -> TeamRecentStats:
             games_played=0,
             total_goals_for=0,
             total_goals_against=0,
+            total_goals=0,
             average_goals_for=0,
             average_goals_against=0,
             average_total_goals=0,
+            wins=0,
+            losses=0,
+            record="0-0",
             over_5_5_count=0,
             over_5_5_percentage=0,
             first_period_goals_for=0,
@@ -86,6 +104,7 @@ def calculate_recent_team_stats(games: list[TeamGameResult]) -> TeamRecentStats:
             average_first_period_total_goals=0,
             first_period_over_1_5_count=0,
             first_period_over_1_5_percentage=0,
+            first_period_exactly_1_count=0,
             first_period_zero_goal_count=0,
             first_period_two_plus_goal_count=0,
         )
@@ -94,9 +113,13 @@ def calculate_recent_team_stats(games: list[TeamGameResult]) -> TeamRecentStats:
         games_played=games_played,
         total_goals_for=total_goals_for,
         total_goals_against=total_goals_against,
+        total_goals=total_goals,
         average_goals_for=total_goals_for / games_played,
         average_goals_against=total_goals_against / games_played,
         average_total_goals=total_goals / games_played,
+        wins=wins,
+        losses=losses,
+        record=f"{wins}-{losses}",
         over_5_5_count=over_5_5_count,
         over_5_5_percentage=(over_5_5_count / games_played) * 100,
         first_period_goals_for=first_period_goals_for,
@@ -110,6 +133,7 @@ def calculate_recent_team_stats(games: list[TeamGameResult]) -> TeamRecentStats:
         first_period_over_1_5_percentage=(
             first_period_over_1_5_count / games_played
         ) * 100,
+        first_period_exactly_1_count=first_period_exactly_1_count,
         first_period_zero_goal_count=first_period_zero_goal_count,
         first_period_two_plus_goal_count=first_period_two_plus_goal_count,
     )
@@ -134,8 +158,11 @@ def calculate_head_to_head_stats(games: list[H2HGameResult]) -> HeadToHeadStats:
             first_period_over_1_5_percentage=0,
             full_game_over_5_5_count=0,
             full_game_over_5_5_percentage=0,
+            last_h2h_first_period_score="",
+            last_h2h_full_game_score="",
         )
 
+    last_game = games[0]
     return HeadToHeadStats(
         games_played=games_played,
         first_period_over_1_5_count=first_period_over_1_5_count,
@@ -146,6 +173,10 @@ def calculate_head_to_head_stats(games: list[H2HGameResult]) -> HeadToHeadStats:
         full_game_over_5_5_percentage=(
             full_game_over_5_5_count / games_played
         ) * 100,
+        last_h2h_first_period_score=(
+            f"{last_game.first_period_away_score}-{last_game.first_period_home_score}"
+        ),
+        last_h2h_full_game_score=f"{last_game.away_score}-{last_game.home_score}",
     )
 
 

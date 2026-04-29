@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date, datetime
 from typing import Any
 
 from src.nhl.api_client import (
@@ -47,11 +48,20 @@ class H2HGameResult:
         return self.first_period_away_score + self.first_period_home_score
 
 
-def get_last_completed_games(team_abbrev: str, limit: int = 5) -> list[TeamGameResult]:
+def get_last_completed_games(
+    team_abbrev: str,
+    limit: int = 5,
+    before_date: str | date | datetime | None = None,
+) -> list[TeamGameResult]:
     """Fetch and normalize the latest completed games for one team."""
     schedule = get_club_schedule_now(team_abbrev)
     games = schedule.get("games", [])
-    completed_games = [game for game in games if _is_completed(game)]
+    normalized_before_date = _normalize_before_date(before_date)
+    completed_games = [
+        game
+        for game in games
+        if _is_completed(game) and _is_before_date(game, normalized_before_date)
+    ]
     completed_games.sort(key=lambda game: game.get("gameDate", ""), reverse=True)
 
     return [
@@ -64,17 +74,29 @@ def get_last_head_to_head_games(
     team_abbrev: str,
     opponent_abbrev: str,
     limit: int = 10,
+    before_date: str | date | datetime | None = None,
 ) -> list[H2HGameResult]:
     """Fetch recent completed games between two NHL teams."""
     schedule = get_club_schedule_now(team_abbrev)
-    h2h_games = _h2h_games_from_schedule(schedule, team_abbrev, opponent_abbrev)
+    normalized_before_date = _normalize_before_date(before_date)
+    h2h_games = _h2h_games_from_schedule(
+        schedule,
+        team_abbrev,
+        opponent_abbrev,
+        normalized_before_date,
+    )
 
     season = schedule.get("previousSeason")
     seasons_checked = 0
     while len(h2h_games) < limit and season and seasons_checked < 6:
         season_schedule = get_club_schedule_season(team_abbrev, season)
         h2h_games.extend(
-            _h2h_games_from_schedule(season_schedule, team_abbrev, opponent_abbrev)
+            _h2h_games_from_schedule(
+                season_schedule,
+                team_abbrev,
+                opponent_abbrev,
+                normalized_before_date,
+            )
         )
         season = _previous_season(season)
         seasons_checked += 1
@@ -121,11 +143,13 @@ def _h2h_games_from_schedule(
     schedule: dict[str, Any],
     team_abbrev: str,
     opponent_abbrev: str,
+    before_date: str | None,
 ) -> list[dict[str, Any]]:
     games = schedule.get("games", [])
     return [
         game for game in games
         if _is_completed(game)
+        and _is_before_date(game, before_date)
         and _is_head_to_head(game, team_abbrev, opponent_abbrev)
     ]
 
@@ -232,3 +256,20 @@ def _localized_value(value: Any) -> str | None:
     if isinstance(value, str):
         return value
     return None
+
+
+def _normalize_before_date(value: str | date | datetime | None) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value.strftime("%Y-%m-%d")
+    if isinstance(value, date):
+        return value.strftime("%Y-%m-%d")
+    return str(value)[:10]
+
+
+def _is_before_date(game: dict[str, Any], before_date: str | None) -> bool:
+    if before_date is None:
+        return True
+    game_date = str(game.get("gameDate", ""))[:10]
+    return bool(game_date) and game_date < before_date

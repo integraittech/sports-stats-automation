@@ -72,6 +72,27 @@ def append_values(
     return result
 
 
+def append_values_raw(
+    range_name: str,
+    values: list[list[str | int | float]],
+) -> dict[str, Any]:
+    """Append rows without Google Sheets type coercion."""
+    service = get_sheets_service()
+    result = (
+        service.spreadsheets()
+        .values()
+        .append(
+            spreadsheetId=get_spreadsheet_id(),
+            range=range_name,
+            valueInputOption="RAW",
+            insertDataOption="INSERT_ROWS",
+            body={"values": values},
+        )
+        .execute()
+    )
+    return result
+
+
 def update_values(
     range_name: str,
     values: list[list[str | int | float]],
@@ -85,6 +106,26 @@ def update_values(
             spreadsheetId=get_spreadsheet_id(),
             range=range_name,
             valueInputOption="USER_ENTERED",
+            body={"values": values},
+        )
+        .execute()
+    )
+    return result
+
+
+def update_values_raw(
+    range_name: str,
+    values: list[list[str | int | float]],
+) -> dict[str, Any]:
+    """Update values without Google Sheets type coercion."""
+    service = get_sheets_service()
+    result = (
+        service.spreadsheets()
+        .values()
+        .update(
+            spreadsheetId=get_spreadsheet_id(),
+            range=range_name,
+            valueInputOption="RAW",
             body={"values": values},
         )
         .execute()

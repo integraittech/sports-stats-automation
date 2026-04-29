@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -35,6 +35,11 @@ def get_today_string() -> str:
 def get_today_slate() -> list[SlateGame]:
     """Fetch and normalize today's NHL slate."""
     date_string = get_today_string()
+    return get_slate_for_date(date_string)
+
+
+def get_slate_for_date(date_string: str) -> list[SlateGame]:
+    """Fetch and normalize the NHL slate for one date."""
     schedule = get_schedule(date_string)
     return normalize_schedule(schedule, date_string)
 
@@ -62,7 +67,7 @@ def normalize_schedule(schedule: dict[str, Any], date_string: str) -> list[Slate
                 away_team=_team_name(game.get("awayTeam", {})),
                 home_team_abbrev=game.get("homeTeam", {}).get("abbrev", ""),
                 home_team=_team_name(game.get("homeTeam", {})),
-                start_time=game.get("startTimeUTC", "TBD"),
+                start_time=_format_local_start_time(game),
             )
         )
 
@@ -98,3 +103,19 @@ def _localized_value(value: Any) -> str | None:
     if isinstance(value, str):
         return value
     return None
+
+
+def _format_local_start_time(game: dict[str, Any]) -> str:
+    timestamp = game.get("startTimeUTC") or game.get("gameDateTime")
+    if not timestamp or not isinstance(timestamp, str):
+        return "TBD"
+
+    try:
+        utc_start = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+    except ValueError:
+        return "TBD"
+
+    if utc_start.tzinfo is None:
+        utc_start = utc_start.replace(tzinfo=timezone.utc)
+
+    return utc_start.astimezone().strftime("%-I:%M %p")

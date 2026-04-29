@@ -75,7 +75,7 @@ class BetsRow:
 
 def read_daily_slate_pick_rows() -> list[DailySlatePickRow]:
     """Read Daily_Slate rows that may need result grading."""
-    rows = get_values("Daily_Slate!A:AD")
+    rows = get_values("Daily_Slate!A:AX")
     pick_rows = []
 
     for index, row in enumerate(rows, start=1):

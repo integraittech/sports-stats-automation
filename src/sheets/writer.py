@@ -10,15 +10,20 @@ from dotenv import load_dotenv
 
 from src.sheets.client import (
     append_values,
+    append_values_raw,
     get_sheets_service,
     get_spreadsheet_id,
     get_values,
     update_values,
+    update_values_raw,
 )
 from src.sheets.schemas import (
     BETS_COLUMNS,
     DAILY_SLATE_COLUMNS,
+    DAILY_SLATE_UNIQUE_ID_COLUMN_INDEX,
     RESULT_COLUMN_LETTER,
+    START_TIME_COLUMN_INDEX,
+    START_TIME_COLUMN_LETTER,
     normalize_sheet_date,
 )
 
@@ -30,6 +35,8 @@ BETS_PARLAY_PROFIT_LOSS_COLUMN_LETTER = "O"
 BETS_GPT_RESULT_COLUMN_LETTER = "Q"
 BETS_GPT_PROFIT_LOSS_COLUMN_LETTER = "R"
 DASHBOARD_SHEET_TITLE = "Dashboard"
+DAILY_SLATE_RANGE = "Daily_Slate!A:AX"
+DAILY_SLATE_HEADER_RANGE = "Daily_Slate!A1:AX1"
 
 
 @dataclass(frozen=True)
@@ -52,27 +59,42 @@ def append_daily_slate_rows(
 ) -> DailySlateWriteResult:
     """Append new Daily_Slate rows, skipping duplicates."""
     load_dotenv()
-    range_name = os.getenv("GOOGLE_SHEETS_APPEND_RANGE", "Daily_Slate!A:AD")
-    existing_rows = get_values("Daily_Slate!A:AD")
+    existing_rows = get_values(DAILY_SLATE_RANGE)
     ensure_daily_slate_headers()
 
     if not existing_rows:
         existing_rows = [DAILY_SLATE_COLUMNS]
 
-    existing_keys = _row_keys(_data_rows(existing_rows))
+    existing_rows_by_key = _daily_slate_rows_by_key(existing_rows)
+    existing_keys = set(existing_rows_by_key)
     new_rows = []
     duplicate_count = 0
 
     for row in rows:
-        row_key = _row_key(row)
+        normalized_row = _normalize_daily_slate_row(row)
+        row_key = _row_key(normalized_row)
         if row_key in existing_keys:
+            if row_key in existing_rows_by_key:
+                row_number, existing_row = existing_rows_by_key[row_key]
+                if _should_repair_start_time(existing_row, normalized_row):
+                    update_values_raw(
+                        f"Daily_Slate!{START_TIME_COLUMN_LETTER}{row_number}",
+                        [[str(normalized_row[START_TIME_COLUMN_INDEX]).strip()]],
+                    )
+                    existing_row[START_TIME_COLUMN_INDEX] = str(
+                        normalized_row[START_TIME_COLUMN_INDEX]
+                    ).strip()
+                    continue
             duplicate_count += 1
             continue
         existing_keys.add(row_key)
-        new_rows.append(row)
+        new_rows.append(_row_with_unique_id(normalized_row, row_key))
 
     if new_rows:
-        append_values(range_name, new_rows)
+        append_values_raw(DAILY_SLATE_RANGE, new_rows)
+
+    print(f"Inserted {len(new_rows)} rows")
+    print(f"Skipped {duplicate_count} duplicates")
 
     return DailySlateWriteResult(
         written_count=len(new_rows),
@@ -82,12 +104,11 @@ def append_daily_slate_rows(
 
 def ensure_daily_slate_headers() -> None:
     """Ensure row 1 matches the Daily_Slate schema."""
-    header_range = "Daily_Slate!A1:AD1"
-    header_rows = get_values(header_range)
+    header_rows = get_values(DAILY_SLATE_HEADER_RANGE)
     current_header = header_rows[0] if header_rows else []
     if _headers_match(current_header, DAILY_SLATE_COLUMNS):
         return
-    update_values(header_range, [DAILY_SLATE_COLUMNS])
+    update_values(DAILY_SLATE_HEADER_RANGE, [DAILY_SLATE_COLUMNS])
 
 
 def ensure_bets_headers() -> None:
@@ -401,8 +422,18 @@ def _headers_match(header_row: list[Any], expected_columns: list[str]) -> bool:
     return [str(value).strip() for value in header_row] == expected_columns
 
 
-def _row_keys(rows: list[list[Any]]) -> set[tuple[str, str, str]]:
+def _row_keys(rows: list[list[Any]]) -> set[str]:
     return {_row_key(row) for row in rows if len(row) >= 3}
+
+
+def _daily_slate_rows_by_key(rows: list[list[Any]]) -> dict[str, tuple[int, list[Any]]]:
+    data_rows = _data_rows(rows)
+    first_row_number = 2 if rows and _is_header_row(rows[0]) else 1
+    return {
+        _row_key(row): (index, row)
+        for index, row in enumerate(data_rows, start=first_row_number)
+        if len(row) >= 3
+    }
 
 
 def _data_rows(rows: list[list[Any]]) -> list[list[Any]]:
@@ -421,9 +452,56 @@ def _is_header_row(row: list[Any]) -> bool:
     )
 
 
-def _row_key(row: list[Any]) -> tuple[str, str, str]:
-    return (
-        normalize_sheet_date(row[0]),
-        str(row[1]).strip(),
-        str(row[2]).strip(),
-    )
+def _row_key(row: list[Any]) -> str:
+    date_string = normalize_sheet_date(row[0])
+    away_team = _normalize_team_name(row[1])
+    home_team = _normalize_team_name(row[2])
+    return f"{date_string}_{away_team}_{home_team}"
+
+
+def _normalize_team_name(value: Any) -> str:
+    return str(value).strip().lower()
+
+
+def _normalize_daily_slate_row(row: list[Any]) -> list[Any]:
+    normalized_row = list(row)
+    if normalized_row:
+        normalized_row[0] = normalize_sheet_date(normalized_row[0])
+    return normalized_row
+
+
+def _row_with_unique_id(row: list[Any], row_key: str) -> list[Any]:
+    row_with_key = list(row)
+    while len(row_with_key) <= DAILY_SLATE_UNIQUE_ID_COLUMN_INDEX:
+        row_with_key.append("")
+    row_with_key[DAILY_SLATE_UNIQUE_ID_COLUMN_INDEX] = row_key
+    return row_with_key
+
+
+def _should_repair_start_time(existing_row: list[Any], new_row: list[Any]) -> bool:
+    if len(new_row) <= START_TIME_COLUMN_INDEX:
+        return False
+
+    new_start_time = str(new_row[START_TIME_COLUMN_INDEX]).strip()
+    if not new_start_time:
+        return False
+
+    existing_start_time = _cell(existing_row, START_TIME_COLUMN_INDEX)
+    return _is_empty_or_invalid_start_time(existing_start_time)
+
+
+def _is_empty_or_invalid_start_time(value: Any) -> bool:
+    text = str(value).strip()
+    if not text:
+        return True
+    try:
+        float(text)
+    except ValueError:
+        return False
+    return True
+
+
+def _cell(row: list[Any], index: int) -> Any:
+    if index >= len(row):
+        return ""
+    return row[index]

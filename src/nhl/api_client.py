@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 
 
 DEFAULT_BASE_URL = "https://api-web.nhle.com"
+REQUEST_TIMEOUT_SECONDS = 10
 
 
 def get_base_url() -> str:
@@ -21,7 +22,7 @@ def get_base_url() -> str:
 def get_schedule(date_string: str) -> dict[str, Any]:
     """Fetch the NHL schedule for a date in YYYY-MM-DD format."""
     url = f"{get_base_url()}/v1/schedule/{date_string}"
-    response = requests.get(url, timeout=20)
+    response = requests.get(url, timeout=REQUEST_TIMEOUT_SECONDS)
     response.raise_for_status()
     return response.json()
 
@@ -29,7 +30,7 @@ def get_schedule(date_string: str) -> dict[str, Any]:
 def get_club_schedule_now(team_abbrev: str) -> dict[str, Any]:
     """Fetch the current season schedule for one NHL team."""
     url = f"{get_base_url()}/v1/club-schedule-season/{team_abbrev}/now"
-    response = requests.get(url, timeout=20)
+    response = requests.get(url, timeout=REQUEST_TIMEOUT_SECONDS)
     response.raise_for_status()
     return response.json()
 
@@ -37,7 +38,7 @@ def get_club_schedule_now(team_abbrev: str) -> dict[str, Any]:
 def get_club_schedule_season(team_abbrev: str, season: int) -> dict[str, Any]:
     """Fetch one season schedule for one NHL team."""
     url = f"{get_base_url()}/v1/club-schedule-season/{team_abbrev}/{season}"
-    response = requests.get(url, timeout=20)
+    response = requests.get(url, timeout=REQUEST_TIMEOUT_SECONDS)
     response.raise_for_status()
     return response.json()
 
@@ -45,6 +46,6 @@ def get_club_schedule_season(team_abbrev: str, season: int) -> dict[str, Any]:
 def get_game_play_by_play(game_id: int) -> dict[str, Any]:
     """Fetch play-by-play data for one NHL game."""
     url = f"{get_base_url()}/v1/gamecenter/{game_id}/play-by-play"
-    response = requests.get(url, timeout=20)
+    response = requests.get(url, timeout=REQUEST_TIMEOUT_SECONDS)
     response.raise_for_status()
     return response.json()
