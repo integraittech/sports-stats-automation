@@ -30,7 +30,7 @@ class TeamRecentStats:
     average_first_period_total_goals: float
     first_period_over_1_5_count: int
     first_period_over_1_5_percentage: float
-    first_period_exactly_1_count: int
+    first_period_scored_count: int
     first_period_zero_goal_count: int
     first_period_two_plus_goal_count: int
 
@@ -69,10 +69,10 @@ def calculate_recent_team_stats(games: list[TeamGameResult]) -> TeamRecentStats:
         1 for game in games
         if game.first_period_team_score + game.first_period_opponent_score > 1.5
     )
-    first_period_exactly_1_count = sum(
+    first_period_scored_count = sum(
         1
         for game in games
-        if game.first_period_team_score + game.first_period_opponent_score == 1
+        if game.first_period_team_score >= 1
     )
     first_period_zero_goal_count = sum(
         1 for game in games
@@ -104,7 +104,7 @@ def calculate_recent_team_stats(games: list[TeamGameResult]) -> TeamRecentStats:
             average_first_period_total_goals=0,
             first_period_over_1_5_count=0,
             first_period_over_1_5_percentage=0,
-            first_period_exactly_1_count=0,
+            first_period_scored_count=0,
             first_period_zero_goal_count=0,
             first_period_two_plus_goal_count=0,
         )
@@ -133,7 +133,7 @@ def calculate_recent_team_stats(games: list[TeamGameResult]) -> TeamRecentStats:
         first_period_over_1_5_percentage=(
             first_period_over_1_5_count / games_played
         ) * 100,
-        first_period_exactly_1_count=first_period_exactly_1_count,
+        first_period_scored_count=first_period_scored_count,
         first_period_zero_goal_count=first_period_zero_goal_count,
         first_period_two_plus_goal_count=first_period_two_plus_goal_count,
     )
