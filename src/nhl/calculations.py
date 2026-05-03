@@ -80,7 +80,7 @@ def calculate_recent_team_stats(games: list[TeamGameResult]) -> TeamRecentStats:
     )
     first_period_two_plus_goal_count = sum(
         1 for game in games
-        if game.first_period_team_score + game.first_period_opponent_score >= 2
+        if game.first_period_team_score >= 2
     )
 
     if games_played == 0:

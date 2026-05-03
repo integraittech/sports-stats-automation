@@ -54,6 +54,10 @@ DAILY_SLATE_COLUMNS = [
     "Home Last 10 Goals For",
     "Home Last 10 Goals Against",
     "Home Last 10 Total Goals",
+    "Away Last 10 1P Goals For",
+    "Away Last 10 1P Goals Against",
+    "Home Last 10 1P Goals For",
+    "Home Last 10 1P Goals Against",
     "My Pick",
     "Pick Type",
     "In Parlay",
@@ -88,11 +92,11 @@ AWAY_TEAM_COLUMN_INDEX = 1
 HOME_TEAM_COLUMN_INDEX = 2
 START_TIME_COLUMN_INDEX = 3
 START_TIME_COLUMN_LETTER = "D"
-MY_PICK_COLUMN_INDEX = 44
-PICK_TYPE_COLUMN_INDEX = 45
-RESULT_COLUMN_INDEX = 47
-RESULT_COLUMN_LETTER = "AV"
-DAILY_SLATE_UNIQUE_ID_COLUMN_INDEX = 49
+MY_PICK_COLUMN_INDEX = 48
+PICK_TYPE_COLUMN_INDEX = 49
+RESULT_COLUMN_INDEX = 51
+RESULT_COLUMN_LETTER = "AZ"
+DAILY_SLATE_UNIQUE_ID_COLUMN_INDEX = 53
 
 
 def build_daily_slate_row(
@@ -150,6 +154,10 @@ def build_daily_slate_row(
         home_last_10_stats.total_goals_for,
         home_last_10_stats.total_goals_against,
         home_last_10_stats.total_goals,
+        away_last_10_stats.first_period_goals_for,
+        away_last_10_stats.first_period_goals_against,
+        home_last_10_stats.first_period_goals_for,
+        home_last_10_stats.first_period_goals_against,
         "",
         "",
         "",

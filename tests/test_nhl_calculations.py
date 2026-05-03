@@ -73,7 +73,7 @@ class NhlCalculationsTests(unittest.TestCase):
         self.assertEqual(stats.record, "3-2")
         self.assertEqual(stats.first_period_scored_count, 3)
         self.assertEqual(stats.first_period_zero_goal_count, 1)
-        self.assertEqual(stats.first_period_two_plus_goal_count, 2)
+        self.assertEqual(stats.first_period_two_plus_goal_count, 1)
 
     def test_calculate_recent_team_stats_counts_games_where_team_scored_in_first_period(
         self,
@@ -90,6 +90,22 @@ class NhlCalculationsTests(unittest.TestCase):
 
         self.assertEqual(stats.first_period_scored_count, 3)
         self.assertEqual(stats.first_period_zero_goal_count, 1)
+        self.assertEqual(stats.first_period_two_plus_goal_count, 1)
+
+    def test_calculate_recent_team_stats_counts_two_plus_first_period_goals_for_team_only(
+        self,
+    ) -> None:
+        games = [
+            TeamGameResult(1, "2026-04-20", "A", 4, 2, 1, 1),
+            TeamGameResult(2, "2026-04-18", "B", 2, 5, 0, 2),
+            TeamGameResult(3, "2026-04-16", "C", 3, 2, 2, 0),
+            TeamGameResult(4, "2026-04-14", "D", 1, 4, 3, 1),
+            TeamGameResult(5, "2026-04-12", "E", 5, 3, 1, 0),
+        ]
+
+        stats = calculate_recent_team_stats(games)
+
+        self.assertEqual(stats.first_period_over_1_5_count, 4)
         self.assertEqual(stats.first_period_two_plus_goal_count, 2)
 
     def test_calculate_recent_team_stats_handles_ten_game_window_record_and_totals(
@@ -227,7 +243,7 @@ class NhlCalculationsTests(unittest.TestCase):
         )
 
         self.assertEqual(
-            row[26:44],
+            row[26:48],
             [
                 "5-5",
                 "2-1",
@@ -247,15 +263,23 @@ class NhlCalculationsTests(unittest.TestCase):
                 30,
                 30,
                 60,
+                10,
+                3,
+                10,
+                2,
             ],
         )
         self.assertEqual(len(row), len(DAILY_SLATE_COLUMNS))
         self.assertEqual(DAILY_SLATE_COLUMNS[3], "Start Time")
         self.assertEqual(DAILY_SLATE_COLUMNS[29], "Away Last 5 Scored 1P Count")
         self.assertEqual(DAILY_SLATE_COLUMNS[34], "Home Last 5 Scored 1P Count")
+        self.assertEqual(DAILY_SLATE_COLUMNS[44], "Away Last 10 1P Goals For")
+        self.assertEqual(DAILY_SLATE_COLUMNS[45], "Away Last 10 1P Goals Against")
+        self.assertEqual(DAILY_SLATE_COLUMNS[46], "Home Last 10 1P Goals For")
+        self.assertEqual(DAILY_SLATE_COLUMNS[47], "Home Last 10 1P Goals Against")
         self.assertEqual(row[3], "7:00 PM")
-        self.assertEqual(row[48], "")
-        self.assertEqual(row[49], "")
+        self.assertEqual(row[52], "")
+        self.assertEqual(row[53], "")
 
 
 if __name__ == "__main__":

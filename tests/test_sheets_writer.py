@@ -29,10 +29,10 @@ class AppendDailySlateRowsTests(unittest.TestCase):
         expected_row = ["2026-04-25", "Edmonton Oilers", "Los Angeles Kings"]
         expected_row.extend([""] * (len(DAILY_SLATE_COLUMNS) - len(expected_row) - 1))
         expected_row.append("2026-04-25_edmonton oilers_los angeles kings")
-        append_values_raw.assert_called_once_with("Daily_Slate!A:AX", [expected_row])
-        self.assertEqual(expected_row[48], "")
+        append_values_raw.assert_called_once_with("Daily_Slate!A:BB", [expected_row])
+        self.assertEqual(expected_row[52], "")
         self.assertEqual(
-            expected_row[49],
+            expected_row[53],
             "2026-04-25_edmonton oilers_los angeles kings",
         )
 
@@ -60,7 +60,7 @@ class AppendDailySlateRowsTests(unittest.TestCase):
         expected_row.extend([""] * (len(DAILY_SLATE_COLUMNS) - len(expected_row) - 1))
         expected_row.append("2026-04-25_toronto maple leafs_ottawa senators")
         append_values_raw.assert_called_once_with(
-            "Daily_Slate!A:AX",
+            "Daily_Slate!A:BB",
             [expected_row],
         )
 
@@ -85,7 +85,7 @@ class AppendDailySlateRowsTests(unittest.TestCase):
         expected_row.extend([""] * (len(DAILY_SLATE_COLUMNS) - len(expected_row) - 1))
         expected_row.append("2026-04-25_edmonton oilers_los angeles kings")
         append_values_raw.assert_called_once_with(
-            "Daily_Slate!A:AX",
+            "Daily_Slate!A:BB",
             [expected_row],
         )
         print_mock.assert_any_call("Inserted 1 rows")
