@@ -52,6 +52,7 @@ def get_last_completed_games(
     team_abbrev: str,
     limit: int = 5,
     before_date: str | date | datetime | None = None,
+    game_type: int | None = None,
 ) -> list[TeamGameResult]:
     """Fetch and normalize the latest completed games for one team."""
     schedule = get_club_schedule_now(team_abbrev)
@@ -60,7 +61,9 @@ def get_last_completed_games(
     completed_games = [
         game
         for game in games
-        if _is_completed(game) and _is_before_date(game, normalized_before_date)
+        if _is_completed(game)
+        and _is_before_date(game, normalized_before_date)
+        and _matches_game_type(game, game_type)
     ]
     completed_games.sort(key=lambda game: game.get("gameDate", ""), reverse=True)
 
@@ -75,6 +78,7 @@ def get_last_head_to_head_games(
     opponent_abbrev: str,
     limit: int = 10,
     before_date: str | date | datetime | None = None,
+    game_type: int | None = None,
 ) -> list[H2HGameResult]:
     """Fetch recent completed games between two NHL teams."""
     schedule = get_club_schedule_now(team_abbrev)
@@ -84,6 +88,7 @@ def get_last_head_to_head_games(
         team_abbrev,
         opponent_abbrev,
         normalized_before_date,
+        game_type,
     )
 
     season = schedule.get("previousSeason")
@@ -96,6 +101,7 @@ def get_last_head_to_head_games(
                 team_abbrev,
                 opponent_abbrev,
                 normalized_before_date,
+                game_type,
             )
         )
         season = _previous_season(season)
@@ -144,14 +150,22 @@ def _h2h_games_from_schedule(
     team_abbrev: str,
     opponent_abbrev: str,
     before_date: str | None,
+    game_type: int | None,
 ) -> list[dict[str, Any]]:
     games = schedule.get("games", [])
     return [
         game for game in games
         if _is_completed(game)
         and _is_before_date(game, before_date)
+        and _matches_game_type(game, game_type)
         and _is_head_to_head(game, team_abbrev, opponent_abbrev)
     ]
+
+
+def _matches_game_type(game: dict[str, Any], game_type: int | None) -> bool:
+    if game_type is None:
+        return True
+    return game.get("gameType") == game_type
 
 
 def _is_head_to_head(

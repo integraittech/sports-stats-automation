@@ -113,26 +113,31 @@ def build_report_row(date_string: str | date | datetime, game: SlateGame) -> lis
         game.away_team_abbrev,
         game.home_team_abbrev,
         before_date=report_date_string,
+        game_type=2,
     )
     away_games = get_last_completed_games(
         game.away_team_abbrev,
         limit=5,
         before_date=report_date_string,
+        game_type=2,
     )
     home_games = get_last_completed_games(
         game.home_team_abbrev,
         limit=5,
         before_date=report_date_string,
+        game_type=2,
     )
     away_last_10_games = get_last_completed_games(
         game.away_team_abbrev,
         limit=10,
         before_date=report_date_string,
+        game_type=2,
     )
     home_last_10_games = get_last_completed_games(
         game.home_team_abbrev,
         limit=10,
         before_date=report_date_string,
+        game_type=2,
     )
 
     h2h_stats = calculate_head_to_head_stats(h2h_games)

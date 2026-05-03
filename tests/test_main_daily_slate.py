@@ -154,14 +154,19 @@ class MainDailySlateBackfillTests(unittest.TestCase):
         ):
             main_daily_slate.build_report_row("2026-04-15", game)
 
-        get_h2h.assert_called_once_with("EDM", "LAK", before_date="2026-04-15")
+        get_h2h.assert_called_once_with(
+            "EDM",
+            "LAK",
+            before_date="2026-04-15",
+            game_type=2,
+        )
         self.assertEqual(
             get_games.call_args_list,
             [
-                call("EDM", limit=5, before_date="2026-04-15"),
-                call("LAK", limit=5, before_date="2026-04-15"),
-                call("EDM", limit=10, before_date="2026-04-15"),
-                call("LAK", limit=10, before_date="2026-04-15"),
+                call("EDM", limit=5, before_date="2026-04-15", game_type=2),
+                call("LAK", limit=5, before_date="2026-04-15", game_type=2),
+                call("EDM", limit=10, before_date="2026-04-15", game_type=2),
+                call("LAK", limit=10, before_date="2026-04-15", game_type=2),
             ],
         )
 
