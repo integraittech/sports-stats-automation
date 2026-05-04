@@ -255,7 +255,7 @@ class MainDailySlateBackfillTests(unittest.TestCase):
         print_mock.assert_any_call("Processing 2026-04-15...")
         print_mock.assert_any_call("Fetched 2 games")
         print_mock.assert_any_call("Inserted 1, Skipped 1")
-        print_mock.assert_any_call("Failed 2026-04-16, skipping")
+        print_mock.assert_any_call("Failed 2026-04-16, skipping: TimeoutError(\'slow schedule response\')")
         print_mock.assert_any_call("Processing 2026-04-17...")
         print_mock.assert_any_call("Fetched 0 games")
         print_mock.assert_any_call("No NHL games found for 2026-04-17.")

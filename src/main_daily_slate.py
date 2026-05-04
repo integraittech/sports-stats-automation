@@ -40,8 +40,8 @@ def main(argv: Sequence[str] | None = None) -> None:
             total_inserted += result.written_count
             total_skipped += result.duplicate_count
             print(f"Inserted {result.written_count}, Skipped {result.duplicate_count}")
-        except Exception:
-            print(f"Failed {date_string}, skipping")
+        except Exception as error:
+            print(f"Failed {date_string}, skipping: {error!r}")
             continue
         finally:
             time.sleep(0.3)
