@@ -14,6 +14,7 @@ DEFAULT_BASE_URL = "https://api-web.nhle.com"
 REQUEST_TIMEOUT_SECONDS = 10
 REQUEST_RETRY_COUNT = 3
 REQUEST_RETRY_DELAY_SECONDS = 1.5
+_RESPONSE_CACHE: dict[str, dict[str, Any]] = {}
 
 
 def get_base_url() -> str:
@@ -23,7 +24,10 @@ def get_base_url() -> str:
 
 
 def _get_json(url: str) -> dict[str, Any]:
-    """Fetch JSON with a small retry/backoff for NHL API rate limits."""
+    """Fetch JSON with retry/backoff and in-process caching."""
+    if url in _RESPONSE_CACHE:
+        return _RESPONSE_CACHE[url]
+
     last_response = None
 
     for attempt in range(REQUEST_RETRY_COUNT + 1):
@@ -32,7 +36,9 @@ def _get_json(url: str) -> dict[str, Any]:
 
         if response.status_code != 429:
             response.raise_for_status()
-            return response.json()
+            data = response.json()
+            _RESPONSE_CACHE[url] = data
+            return data
 
         if attempt < REQUEST_RETRY_COUNT:
             retry_after = response.headers.get("Retry-After")
