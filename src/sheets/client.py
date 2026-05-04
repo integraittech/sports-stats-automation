@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from typing import Any
 
@@ -25,14 +26,25 @@ def get_spreadsheet_id() -> str:
 def get_sheets_service() -> Any:
     """Create an authenticated Google Sheets API service."""
     load_dotenv()
+    credentials_json = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
     credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-    if not credentials_path:
-        raise RuntimeError("Missing GOOGLE_APPLICATION_CREDENTIALS in environment.")
 
-    credentials = Credentials.from_service_account_file(
-        credentials_path,
-        scopes=SCOPES,
-    )
+    if credentials_json:
+        credentials_info = json.loads(credentials_json)
+        credentials = Credentials.from_service_account_info(
+            credentials_info,
+            scopes=SCOPES,
+        )
+    elif credentials_path:
+        credentials = Credentials.from_service_account_file(
+            credentials_path,
+            scopes=SCOPES,
+        )
+    else:
+        raise RuntimeError(
+            "Missing Google credentials. Set GOOGLE_SERVICE_ACCOUNT_JSON or GOOGLE_APPLICATION_CREDENTIALS."
+        )
+
     return build("sheets", "v4", credentials=credentials)
 
 
