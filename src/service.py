@@ -26,14 +26,26 @@ class DailySlateRefreshResponse(BaseModel):
     dates: list[dict[str, Any]]
 
 
+def _clean_token(value: str | None) -> str:
+    return (value or "").strip().strip("\"").strip("'")
+
+
 def _check_refresh_token(authorization: str | None) -> None:
     load_dotenv()
-    expected_token = os.getenv("DAILY_SLATE_REFRESH_TOKEN")
+    expected_token = _clean_token(os.getenv("DAILY_SLATE_REFRESH_TOKEN"))
     if not expected_token:
         raise HTTPException(status_code=500, detail="Missing DAILY_SLATE_REFRESH_TOKEN.")
 
-    expected_header = f"Bearer {expected_token}"
-    if authorization != expected_header:
+    header_value = (authorization or "").strip()
+    bearer_prefix = "Bearer "
+    provided_token = (
+        header_value[len(bearer_prefix):]
+        if header_value.startswith(bearer_prefix)
+        else header_value
+    )
+    provided_token = _clean_token(provided_token)
+
+    if provided_token != expected_token:
         raise HTTPException(status_code=401, detail="Unauthorized.")
 
 
