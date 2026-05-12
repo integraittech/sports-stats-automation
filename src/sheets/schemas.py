@@ -7,6 +7,7 @@ from typing import Any
 
 from src.nhl.calculations import HeadToHeadStats, TeamRecentStats
 from src.nhl.slate import SlateGame
+from src.nhl.playoff_trends import PLAYOFF_TRENDS_COLUMNS
 
 
 DAILY_SLATE_COLUMNS = [

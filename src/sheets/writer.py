@@ -20,6 +20,7 @@ from src.sheets.client import (
 from src.sheets.schemas import (
     BETS_COLUMNS,
     DAILY_SLATE_COLUMNS,
+    PLAYOFF_TRENDS_COLUMNS,
     DAILY_SLATE_UNIQUE_ID_COLUMN_INDEX,
     RESULT_COLUMN_LETTER,
     START_TIME_COLUMN_INDEX,
@@ -37,6 +38,9 @@ BETS_GPT_PROFIT_LOSS_COLUMN_LETTER = "R"
 DASHBOARD_SHEET_TITLE = "Dashboard"
 DAILY_SLATE_RANGE = "Daily_Slate!A:BB"
 DAILY_SLATE_HEADER_RANGE = "Daily_Slate!A1:BB1"
+PLAYOFF_TRENDS_SHEET_TITLE = "Playoff_Trends"
+PLAYOFF_TRENDS_RANGE = "Playoff_Trends!A:Y"
+PLAYOFF_TRENDS_HEADER_RANGE = "Playoff_Trends!A1:Y1"
 
 
 @dataclass(frozen=True)
@@ -45,6 +49,14 @@ class DailySlateWriteResult:
 
     written_count: int
     duplicate_count: int
+
+
+@dataclass(frozen=True)
+class PlayoffTrendWriteResult:
+    """Counts from a Playoff_Trends upsert operation."""
+
+    inserted_count: int
+    updated_count: int
 
 
 def append_test_row() -> dict[str, Any]:
@@ -505,3 +517,67 @@ def _cell(row: list[Any], index: int) -> Any:
     if index >= len(row):
         return ""
     return row[index]
+
+
+def upsert_playoff_trend_rows(
+    rows: list[list[str | int | bool]],
+) -> PlayoffTrendWriteResult:
+    """Insert or update Playoff_Trends rows by UNIQUE_ID."""
+    ensure_sheet_exists(PLAYOFF_TRENDS_SHEET_TITLE)
+    ensure_playoff_trends_headers()
+
+    existing_rows = get_values(PLAYOFF_TRENDS_RANGE)
+    existing_by_key = _playoff_trend_rows_by_key(existing_rows)
+
+    inserted_rows = []
+    updated_count = 0
+
+    for row in rows:
+        if not row:
+            continue
+
+        row_key = str(row[0]).strip()
+        if not row_key:
+            continue
+
+        if row_key in existing_by_key:
+            row_number = existing_by_key[row_key]
+            update_values_raw(
+                f"Playoff_Trends!A{row_number}:Y{row_number}",
+                [row],
+            )
+            updated_count += 1
+        else:
+            inserted_rows.append(row)
+
+    if inserted_rows:
+        append_values_raw(PLAYOFF_TRENDS_RANGE, inserted_rows)
+
+    print(f"Inserted {len(inserted_rows)} playoff trend rows")
+    print(f"Updated {updated_count} playoff trend rows")
+
+    return PlayoffTrendWriteResult(
+        inserted_count=len(inserted_rows),
+        updated_count=updated_count,
+    )
+
+
+def ensure_playoff_trends_headers() -> None:
+    """Ensure row 1 matches the Playoff_Trends schema."""
+    ensure_sheet_exists(PLAYOFF_TRENDS_SHEET_TITLE)
+    header_rows = get_values(PLAYOFF_TRENDS_HEADER_RANGE)
+    current_header = header_rows[0] if header_rows else []
+    if _headers_match(current_header, PLAYOFF_TRENDS_COLUMNS):
+        return
+    update_values(PLAYOFF_TRENDS_HEADER_RANGE, [PLAYOFF_TRENDS_COLUMNS])
+
+
+def _playoff_trend_rows_by_key(rows: list[list[Any]]) -> dict[str, int]:
+    data_rows = rows[1:] if rows and _headers_match(rows[0], PLAYOFF_TRENDS_COLUMNS) else rows
+    first_row_number = 2 if rows and _headers_match(rows[0], PLAYOFF_TRENDS_COLUMNS) else 1
+
+    return {
+        str(row[0]).strip(): row_number
+        for row_number, row in enumerate(data_rows, start=first_row_number)
+        if row and str(row[0]).strip()
+    }

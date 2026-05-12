@@ -11,8 +11,9 @@ from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
 
 from src.main_daily_slate import build_report_row
+from src.nhl.playoff_trends import build_playoff_trend_row
 from src.nhl.slate import get_slate_for_date, get_today_string
-from src.sheets.writer import append_daily_slate_rows
+from src.sheets.writer import append_daily_slate_rows, upsert_playoff_trend_rows
 
 
 app = FastAPI(title="BetTracker Automation Service")
@@ -24,6 +25,8 @@ class DailySlateRefreshResponse(BaseModel):
     inserted: int
     skipped: int
     dates: list[dict[str, Any]]
+    trends_inserted: int = 0
+    trends_updated: int = 0
 
 
 def _clean_token(value: str | None) -> str:
@@ -86,12 +89,27 @@ def refresh_daily_slate(
 
     total_inserted = 0
     total_skipped = 0
+    total_trends_inserted = 0
+    total_trends_updated = 0
     date_summaries: list[dict[str, Any]] = []
 
     for date_string in _date_range(start_date, end_date):
         slate_games = get_slate_for_date(date_string)
         rows = [build_report_row(date_string, game) for game in slate_games]
         result = append_daily_slate_rows(rows)
+
+        playoff_trend_rows = []
+        trend_failures = 0
+        for game in slate_games:
+            try:
+                playoff_trend_rows.append(build_playoff_trend_row(date_string, game).row)
+            except Exception as error:
+                trend_failures += 1
+                print(f"Failed playoff trend {date_string} {game.away_team_abbrev} {game.home_team_abbrev}: {error!r}")
+
+        trend_result = upsert_playoff_trend_rows(playoff_trend_rows)
+        total_trends_inserted += trend_result.inserted_count
+        total_trends_updated += trend_result.updated_count
 
         total_inserted += result.written_count
         total_skipped += result.duplicate_count
@@ -101,6 +119,9 @@ def refresh_daily_slate(
                 "games": len(slate_games),
                 "inserted": result.written_count,
                 "skipped": result.duplicate_count,
+                "trends_inserted": trend_result.inserted_count,
+                "trends_updated": trend_result.updated_count,
+                "trend_failures": trend_failures,
             }
         )
 
@@ -110,4 +131,6 @@ def refresh_daily_slate(
         inserted=total_inserted,
         skipped=total_skipped,
         dates=date_summaries,
+        trends_inserted=total_trends_inserted,
+        trends_updated=total_trends_updated,
     )
