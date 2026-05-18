@@ -23,9 +23,14 @@ def get_base_url() -> str:
     return os.getenv("NHL_API_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
 
 
-def _get_json(url: str) -> dict[str, Any]:
-    """Fetch JSON with retry/backoff and in-process caching."""
-    if url in _RESPONSE_CACHE:
+def clear_response_cache() -> None:
+    """Clear cached NHL API responses for a fresh refresh run."""
+    _RESPONSE_CACHE.clear()
+
+
+def _get_json(url: str, *, use_cache: bool = True) -> dict[str, Any]:
+    """Fetch JSON with retry/backoff and optional in-process caching."""
+    if use_cache and url in _RESPONSE_CACHE:
         return _RESPONSE_CACHE[url]
 
     last_response = None
@@ -53,25 +58,30 @@ def _get_json(url: str) -> dict[str, Any]:
     return last_response.json()
 
 
-def get_schedule(date_string: str) -> dict[str, Any]:
+def get_schedule(date_string: str, *, fresh: bool = False) -> dict[str, Any]:
     """Fetch the NHL schedule for a date in YYYY-MM-DD format."""
     url = f"{get_base_url()}/v1/schedule/{date_string}"
-    return _get_json(url)
+    return _get_json(url, use_cache=not fresh)
 
 
-def get_club_schedule_now(team_abbrev: str) -> dict[str, Any]:
+def get_club_schedule_now(team_abbrev: str, *, fresh: bool = False) -> dict[str, Any]:
     """Fetch the current season schedule for one NHL team."""
     url = f"{get_base_url()}/v1/club-schedule-season/{team_abbrev}/now"
-    return _get_json(url)
+    return _get_json(url, use_cache=not fresh)
 
 
-def get_club_schedule_season(team_abbrev: str, season: int) -> dict[str, Any]:
+def get_club_schedule_season(
+    team_abbrev: str,
+    season: int,
+    *,
+    fresh: bool = False,
+) -> dict[str, Any]:
     """Fetch one season schedule for one NHL team."""
     url = f"{get_base_url()}/v1/club-schedule-season/{team_abbrev}/{season}"
-    return _get_json(url)
+    return _get_json(url, use_cache=not fresh)
 
 
-def get_game_play_by_play(game_id: int) -> dict[str, Any]:
+def get_game_play_by_play(game_id: int, *, fresh: bool = False) -> dict[str, Any]:
     """Fetch play-by-play data for one NHL game."""
     url = f"{get_base_url()}/v1/gamecenter/{game_id}/play-by-play"
-    return _get_json(url)
+    return _get_json(url, use_cache=not fresh)

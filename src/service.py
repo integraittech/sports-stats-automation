@@ -11,9 +11,10 @@ from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
 
 from src.main_daily_slate import build_report_row
+from src.nhl.api_client import clear_response_cache
 from src.nhl.playoff_trends import build_playoff_trend_row
 from src.nhl.slate import get_slate_for_date, get_today_string
-from src.sheets.writer import append_daily_slate_rows, upsert_playoff_trend_rows
+from src.sheets.writer import append_daily_slate_rows, replace_playoff_trend_rows_for_dates
 
 
 app = FastAPI(title="BetTracker Automation Service")
@@ -92,6 +93,7 @@ def refresh_daily_slate(
     total_trends_inserted = 0
     total_trends_updated = 0
     date_summaries: list[dict[str, Any]] = []
+    clear_response_cache()
 
     for date_string in _date_range(start_date, end_date):
         slate_games = get_slate_for_date(date_string)
@@ -100,14 +102,24 @@ def refresh_daily_slate(
 
         playoff_trend_rows = []
         trend_failures = 0
+        debug_game_id = _debug_playoff_trend_game_id(slate_games)
         for game in slate_games:
             try:
-                playoff_trend_rows.append(build_playoff_trend_row(date_string, game).row)
+                playoff_trend_rows.append(
+                    build_playoff_trend_row(
+                        date_string,
+                        game,
+                        debug=game.game_id == debug_game_id,
+                    ).row
+                )
             except Exception as error:
                 trend_failures += 1
                 print(f"Failed playoff trend {date_string} {game.away_team_abbrev} {game.home_team_abbrev}: {error!r}")
 
-        trend_result = upsert_playoff_trend_rows(playoff_trend_rows)
+        trend_result = replace_playoff_trend_rows_for_dates(
+            playoff_trend_rows,
+            refreshed_dates=[date_string],
+        )
         total_trends_inserted += trend_result.inserted_count
         total_trends_updated += trend_result.updated_count
 
@@ -134,3 +146,12 @@ def refresh_daily_slate(
         trends_inserted=total_trends_inserted,
         trends_updated=total_trends_updated,
     )
+
+
+def _debug_playoff_trend_game_id(slate_games: list[Any]) -> int | None:
+    for game in slate_games:
+        if {game.away_team_abbrev, game.home_team_abbrev} == {"BUF", "MTL"}:
+            return game.game_id
+    if slate_games:
+        return slate_games[0].game_id
+    return None

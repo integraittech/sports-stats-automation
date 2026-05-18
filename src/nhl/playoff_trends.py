@@ -46,12 +46,22 @@ class PlayoffTrendBuildResult:
     skipped_reason: str | None = None
 
 
-def build_playoff_trend_row(date_string: str, game: SlateGame) -> PlayoffTrendBuildResult:
+def build_playoff_trend_row(
+    date_string: str,
+    game: SlateGame,
+    *,
+    debug: bool = False,
+) -> PlayoffTrendBuildResult:
     season_id = _season_id_for_date(date_string)
     schedule = get_club_schedule_season(game.away_team_abbrev, season_id)
     games = schedule.get("games", [])
 
-    series_games = _series_games(games, game.away_team_abbrev, game.home_team_abbrev)
+    series_games = _series_games(
+        games,
+        game.away_team_abbrev,
+        game.home_team_abbrev,
+        scheduled_date=date_string,
+    )
     scheduled_game_number = _scheduled_series_game_number(
         games,
         game.away_team_abbrev,
@@ -108,6 +118,17 @@ def build_playoff_trend_row(date_string: str, game: SlateGame) -> PlayoffTrendBu
         datetime.now(timezone.utc).isoformat(),
     ]
 
+    if debug:
+        _debug_log_trend_build(
+            date_string=date_string,
+            game=game,
+            row=row,
+            series_games=series_games,
+            first_period_trend=first_period_trend,
+            full_game_totals=full_game_totals,
+            last_detail=last_detail,
+        )
+
     return PlayoffTrendBuildResult(row=row)
 
 
@@ -147,13 +168,20 @@ def _season_id_for_date(date_string: str) -> int:
     return int(f"{start_year}{start_year + 1}")
 
 
-def _series_games(games: list[dict[str, Any]], team_a: str, team_b: str) -> list[dict[str, Any]]:
+def _series_games(
+    games: list[dict[str, Any]],
+    team_a: str,
+    team_b: str,
+    *,
+    scheduled_date: str,
+) -> list[dict[str, Any]]:
     filtered = [
         game
         for game in games
         if game.get("gameType") == 3
         and game.get("gameState") in {"OFF", "FINAL", "Final"}
         and _is_matchup(game, team_a, team_b)
+        and str(game.get("gameDate", ""))[:10] < scheduled_date
     ]
     return sorted(filtered, key=lambda item: item.get("gameDate", ""))[-7:]
 
@@ -268,3 +296,39 @@ def _is_overtime(detail: dict[str, Any]) -> bool:
 
 def _unique_id(date_string: str, away_team: str, home_team: str) -> str:
     return f"{date_string}_{away_team.lower()}_{home_team.lower()}"
+
+
+def _debug_log_trend_build(
+    *,
+    date_string: str,
+    game: SlateGame,
+    row: list[str | int | bool],
+    series_games: list[dict[str, Any]],
+    first_period_trend: list[int],
+    full_game_totals: list[int],
+    last_detail: dict[str, Any],
+) -> None:
+    included_games = [
+        {
+            "gameId": game.get("id"),
+            "date": str(game.get("gameDate", ""))[:10],
+        }
+        for game in series_games
+    ]
+    print(
+        "Playoff_Trends debug | "
+        f"scheduled_date={date_string} | "
+        f"away={game.away_team_abbrev} | "
+        f"home={game.home_team_abbrev} | "
+        f"unique_id={row[0]} | "
+        f"completed_h2h_count={len(series_games)} | "
+        f"included_games={included_games} | "
+        f"first_period_trend={first_period_trend} | "
+        f"full_game_totals={full_game_totals} | "
+        f"last_game_score={_format_score(last_detail)}"
+    )
+
+
+def _format_score(detail: dict[str, Any]) -> str:
+    teams = _game_teams(detail)
+    return f"{teams['away']} {_score(detail, 'away')} - {teams['home']} {_score(detail, 'home')}"

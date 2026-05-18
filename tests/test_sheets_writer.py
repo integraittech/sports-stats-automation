@@ -161,5 +161,44 @@ class AppendDailySlateRowsTests(unittest.TestCase):
         update_values_raw.assert_not_called()
 
 
+class ReplacePlayoffTrendRowsTests(unittest.TestCase):
+    def test_replace_playoff_trend_rows_for_dates_removes_stale_rows(self) -> None:
+        existing_rows = [
+            writer.PLAYOFF_TRENDS_COLUMNS,
+            ["2026-05-17_edm_lak", "2026-05-17", "EDM", "LAK"],
+            ["2026-05-18_old_buf_mtl", "2026-05-18", "BUF", "MTL"],
+            ["2026-05-18_old_mtl_buf", "2026-05-18", "MTL", "BUF"],
+            ["2026-05-19_nyr_car", "2026-05-19", "NYR", "CAR"],
+        ]
+        refreshed_rows = [
+            ["2026-05-18_mtl_buf", "2026-05-18", "MTL", "BUF"],
+        ]
+
+        with (
+            patch.object(writer, "ensure_sheet_exists"),
+            patch.object(writer, "ensure_playoff_trends_headers"),
+            patch.object(writer, "get_values", return_value=existing_rows),
+            patch.object(writer, "_clear_range_values") as clear_range,
+            patch.object(writer, "update_values_raw") as update_values_raw,
+        ):
+            result = writer.replace_playoff_trend_rows_for_dates(
+                refreshed_rows,
+                refreshed_dates=["2026-05-18"],
+            )
+
+        self.assertEqual(result.inserted_count, 1)
+        self.assertEqual(result.updated_count, 0)
+        clear_range.assert_called_once_with("Playoff_Trends!A:Y")
+        update_values_raw.assert_called_once_with(
+            "Playoff_Trends!A1:Y",
+            [
+                writer.PLAYOFF_TRENDS_COLUMNS,
+                ["2026-05-17_edm_lak", "2026-05-17", "EDM", "LAK"],
+                ["2026-05-19_nyr_car", "2026-05-19", "NYR", "CAR"],
+                ["2026-05-18_mtl_buf", "2026-05-18", "MTL", "BUF"],
+            ],
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

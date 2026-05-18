@@ -305,10 +305,14 @@ def _dashboard_values() -> list[list[str]]:
 
 
 def _clear_sheet_values(sheet_title: str) -> None:
+    _clear_range_values(f"{sheet_title}!A:O")
+
+
+def _clear_range_values(range_name: str) -> None:
     service = get_sheets_service()
     service.spreadsheets().values().clear(
         spreadsheetId=get_spreadsheet_id(),
-        range=f"{sheet_title}!A:O",
+        range=range_name,
     ).execute()
 
 
@@ -562,6 +566,41 @@ def upsert_playoff_trend_rows(
     )
 
 
+def replace_playoff_trend_rows_for_dates(
+    rows: list[list[str | int | bool]],
+    *,
+    refreshed_dates: list[str],
+) -> PlayoffTrendWriteResult:
+    """Replace Playoff_Trends rows for refreshed dates and preserve others."""
+    ensure_sheet_exists(PLAYOFF_TRENDS_SHEET_TITLE)
+    ensure_playoff_trends_headers()
+
+    refreshed_dates_set = {normalize_sheet_date(value) for value in refreshed_dates}
+    existing_rows = get_values(PLAYOFF_TRENDS_RANGE)
+    existing_data_rows = (
+        existing_rows[1:]
+        if existing_rows and _headers_match(existing_rows[0], PLAYOFF_TRENDS_COLUMNS)
+        else existing_rows
+    )
+    preserved_rows = [
+        row
+        for row in existing_data_rows
+        if _playoff_trend_row_date(row) not in refreshed_dates_set
+    ]
+    all_rows = [PLAYOFF_TRENDS_COLUMNS, *preserved_rows, *rows]
+
+    _clear_range_values(PLAYOFF_TRENDS_RANGE)
+    update_values_raw("Playoff_Trends!A1:Y", all_rows)
+
+    print(f"Replaced {len(rows)} playoff trend rows for dates {sorted(refreshed_dates_set)}")
+    print(f"Preserved {len(preserved_rows)} playoff trend rows outside refresh window")
+
+    return PlayoffTrendWriteResult(
+        inserted_count=len(rows),
+        updated_count=0,
+    )
+
+
 def ensure_playoff_trends_headers() -> None:
     """Ensure row 1 matches the Playoff_Trends schema."""
     ensure_sheet_exists(PLAYOFF_TRENDS_SHEET_TITLE)
@@ -581,3 +620,9 @@ def _playoff_trend_rows_by_key(rows: list[list[Any]]) -> dict[str, int]:
         for row_number, row in enumerate(data_rows, start=first_row_number)
         if row and str(row[0]).strip()
     }
+
+
+def _playoff_trend_row_date(row: list[Any]) -> str:
+    if len(row) <= 1:
+        return ""
+    return normalize_sheet_date(row[1])
