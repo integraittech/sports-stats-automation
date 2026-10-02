@@ -14,10 +14,12 @@ from src.main_daily_slate import build_report_rows
 from src.nhl.api_client import clear_response_cache
 from src.nhl.playoff_trends import build_playoff_trend_row
 from src.nhl.slate import get_slate_for_date, get_today_string
+from src.refresh_jobs import RefreshJobManager
 from src.sheets.writer import append_daily_slate_rows, replace_playoff_trend_rows_for_dates
 
 
 app = FastAPI(title="BetTracker Automation Service")
+refresh_jobs = RefreshJobManager()
 
 
 class DailySlateRefreshResponse(BaseModel):
@@ -67,13 +69,13 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@app.post("/daily-slate/refresh", response_model=DailySlateRefreshResponse)
+@app.post("/daily-slate/refresh", status_code=202)
 def refresh_daily_slate(
     start: str | None = None,
     end: str | None = None,
     authorization: str | None = Header(default=None),
-) -> DailySlateRefreshResponse:
-    """Refresh Daily_Slate rows for a date range, defaulting to today and tomorrow."""
+) -> dict[str, Any]:
+    """Start a Daily_Slate refresh and return a job that can be polled."""
     _check_refresh_token(authorization)
 
     if start or end:
@@ -87,6 +89,36 @@ def refresh_daily_slate(
 
     if start_date > end_date:
         raise HTTPException(status_code=400, detail="start must be on or before end.")
+
+    job_key = f"{start_date.isoformat()}:{end_date.isoformat()}"
+    return refresh_jobs.start(
+        job_key,
+        lambda: _run_daily_slate_refresh(start_date, end_date),
+    )
+
+
+@app.get("/daily-slate/refresh/{job_id}")
+def daily_slate_refresh_status(
+    job_id: str,
+    authorization: str | None = Header(default=None),
+) -> dict[str, Any]:
+    """Return the current state or result of a Daily_Slate refresh job."""
+    _check_refresh_token(authorization)
+    job = refresh_jobs.get(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Refresh job not found.")
+
+    result = job.get("result")
+    if isinstance(result, BaseModel):
+        job["result"] = result.model_dump()
+    return job
+
+
+def _run_daily_slate_refresh(
+    start_date: date,
+    end_date: date,
+) -> DailySlateRefreshResponse:
+    """Run the blocking refresh work outside the request lifecycle."""
 
     total_inserted = 0
     total_skipped = 0
