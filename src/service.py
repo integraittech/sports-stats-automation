@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
 
-from src.main_daily_slate import build_report_row
+from src.main_daily_slate import build_report_rows
 from src.nhl.api_client import clear_response_cache
 from src.nhl.playoff_trends import build_playoff_trend_row
 from src.nhl.slate import get_slate_for_date, get_today_string
@@ -97,7 +97,7 @@ def refresh_daily_slate(
 
     for date_string in _date_range(start_date, end_date):
         slate_games = get_slate_for_date(date_string)
-        rows = [build_report_row(date_string, game) for game in slate_games]
+        rows = build_report_rows(date_string, slate_games)
         result = append_daily_slate_rows(rows)
 
         playoff_trend_rows = []

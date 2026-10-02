@@ -72,7 +72,8 @@ class NhlCalculationsTests(unittest.TestCase):
         self.assertEqual(stats.total_goals, 31)
         self.assertEqual(stats.record, "3-2")
         self.assertEqual(stats.first_period_scored_count, 3)
-        self.assertEqual(stats.first_period_zero_goal_count, 1)
+        self.assertEqual(stats.first_period_bts_count, 1)
+        self.assertEqual(stats.first_period_zero_goal_count, 2)
         self.assertEqual(stats.first_period_two_plus_goal_count, 1)
 
     def test_calculate_recent_team_stats_counts_games_where_team_scored_in_first_period(
@@ -89,7 +90,8 @@ class NhlCalculationsTests(unittest.TestCase):
         stats = calculate_recent_team_stats(games)
 
         self.assertEqual(stats.first_period_scored_count, 3)
-        self.assertEqual(stats.first_period_zero_goal_count, 1)
+        self.assertEqual(stats.first_period_bts_count, 1)
+        self.assertEqual(stats.first_period_zero_goal_count, 2)
         self.assertEqual(stats.first_period_two_plus_goal_count, 1)
 
     def test_calculate_recent_team_stats_counts_two_plus_first_period_goals_for_team_only(
@@ -248,12 +250,12 @@ class NhlCalculationsTests(unittest.TestCase):
                 "5-5",
                 "2-1",
                 "4-3",
-                3,
+                1,
                 15,
                 16,
                 31,
                 "5-5",
-                3,
+                1,
                 16,
                 12,
                 28,
@@ -271,8 +273,8 @@ class NhlCalculationsTests(unittest.TestCase):
         )
         self.assertEqual(len(row), len(DAILY_SLATE_COLUMNS))
         self.assertEqual(DAILY_SLATE_COLUMNS[3], "Start Time")
-        self.assertEqual(DAILY_SLATE_COLUMNS[29], "Away Last 5 Scored 1P Count")
-        self.assertEqual(DAILY_SLATE_COLUMNS[34], "Home Last 5 Scored 1P Count")
+        self.assertEqual(DAILY_SLATE_COLUMNS[29], "Away Last 5 1P BTS Count")
+        self.assertEqual(DAILY_SLATE_COLUMNS[34], "Home Last 5 1P BTS Count")
         self.assertEqual(DAILY_SLATE_COLUMNS[44], "Away Last 10 1P Goals For")
         self.assertEqual(DAILY_SLATE_COLUMNS[45], "Away Last 10 1P Goals Against")
         self.assertEqual(DAILY_SLATE_COLUMNS[46], "Home Last 10 1P Goals For")

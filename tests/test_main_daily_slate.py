@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from datetime import date
+import os
+import threading
+import time
 import unittest
 from unittest.mock import call, patch
 
@@ -81,6 +84,59 @@ def test_explicit_backfill_builds_rows_for_each_date_before_append(monkeypatch):
 
 
 class MainDailySlateBackfillTests(unittest.TestCase):
+    def test_build_report_rows_runs_concurrently_and_preserves_order(self) -> None:
+        from src import main_daily_slate
+
+        games = [
+            SlateGame(
+                game_id=game_id,
+                away_team_abbrev=f"A{game_id}",
+                away_team=f"Away {game_id}",
+                home_team_abbrev=f"H{game_id}",
+                home_team=f"Home {game_id}",
+                start_time="7:00 PM",
+            )
+            for game_id in range(1, 4)
+        ]
+        barrier = threading.Barrier(len(games))
+
+        def fake_build_report_row(
+            date_string: str,
+            game: SlateGame,
+        ) -> list[str | int]:
+            barrier.wait(timeout=1)
+            time.sleep(0.01 * (len(games) - game.game_id))
+            return [date_string, game.game_id]
+
+        with patch.object(
+            main_daily_slate,
+            "build_report_row",
+            side_effect=fake_build_report_row,
+        ):
+            rows = main_daily_slate.build_report_rows("2026-10-02", games)
+
+        self.assertEqual(
+            rows,
+            [
+                ["2026-10-02", 1],
+                ["2026-10-02", 2],
+                ["2026-10-02", 3],
+            ],
+        )
+
+    def test_refresh_worker_count_is_bounded_and_tolerates_invalid_config(self) -> None:
+        from src import main_daily_slate
+
+        with patch.dict(os.environ, {"DAILY_SLATE_REFRESH_WORKERS": "2"}):
+            self.assertEqual(main_daily_slate.refresh_worker_count(5), 2)
+            self.assertEqual(main_daily_slate.refresh_worker_count(1), 1)
+
+        with patch.dict(os.environ, {"DAILY_SLATE_REFRESH_WORKERS": "invalid"}):
+            self.assertEqual(
+                main_daily_slate.refresh_worker_count(20),
+                main_daily_slate.DEFAULT_REFRESH_WORKERS,
+            )
+
     def test_build_report_row_converts_date_to_iso_string_before_schema_build(
         self,
     ) -> None:

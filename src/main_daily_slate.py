@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import os
 import time
 from collections.abc import Sequence
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 
 from src.nhl.calculations import (
@@ -18,6 +20,9 @@ from src.nhl.history import (
 from src.nhl.slate import SlateGame, get_slate_for_date, get_today_string
 from src.sheets.schemas import build_daily_slate_row
 from src.sheets.writer import append_daily_slate_rows
+
+
+DEFAULT_REFRESH_WORKERS = 8
 
 
 def main(argv: Sequence[str] | None = None) -> None:
@@ -155,6 +160,33 @@ def build_report_row(date_string: str | date | datetime, game: SlateGame) -> lis
         away_last_10_stats=away_last_10_stats,
         home_last_10_stats=home_last_10_stats,
     )
+
+
+def refresh_worker_count(game_count: int) -> int:
+    """Return a bounded worker count for independent matchup calculations."""
+    configured = os.getenv("DAILY_SLATE_REFRESH_WORKERS", str(DEFAULT_REFRESH_WORKERS))
+    try:
+        worker_limit = max(1, int(configured))
+    except ValueError:
+        worker_limit = DEFAULT_REFRESH_WORKERS
+    return min(game_count, worker_limit)
+
+
+def build_report_rows(
+    date_string: str | date | datetime,
+    slate_games: list[SlateGame],
+) -> list[list[str | int | float]]:
+    """Build matchup reports concurrently while preserving the slate order."""
+    if not slate_games:
+        return []
+
+    with ThreadPoolExecutor(max_workers=refresh_worker_count(len(slate_games))) as executor:
+        return list(
+            executor.map(
+                lambda game: build_report_row(date_string, game),
+                slate_games,
+            )
+        )
 
 
 if __name__ == "__main__":
