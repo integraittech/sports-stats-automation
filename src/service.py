@@ -26,6 +26,7 @@ class DailySlateRefreshResponse(BaseModel):
     start_date: str
     end_date: str
     inserted: int
+    updated: int
     skipped: int
     dates: list[dict[str, Any]]
     trends_inserted: int = 0
@@ -121,6 +122,7 @@ def _run_daily_slate_refresh(
     """Run the blocking refresh work outside the request lifecycle."""
 
     total_inserted = 0
+    total_updated = 0
     total_skipped = 0
     total_trends_inserted = 0
     total_trends_updated = 0
@@ -130,7 +132,7 @@ def _run_daily_slate_refresh(
     for date_string in _date_range(start_date, end_date):
         slate_games = get_slate_for_date(date_string)
         rows = build_report_rows(date_string, slate_games)
-        result = append_daily_slate_rows(rows)
+        result = append_daily_slate_rows(rows, update_existing=True)
 
         playoff_trend_rows = []
         trend_failures = 0
@@ -156,12 +158,14 @@ def _run_daily_slate_refresh(
         total_trends_updated += trend_result.updated_count
 
         total_inserted += result.written_count
+        total_updated += result.updated_count
         total_skipped += result.duplicate_count
         date_summaries.append(
             {
                 "date": date_string,
                 "games": len(slate_games),
                 "inserted": result.written_count,
+                "updated": result.updated_count,
                 "skipped": result.duplicate_count,
                 "trends_inserted": trend_result.inserted_count,
                 "trends_updated": trend_result.updated_count,
@@ -173,6 +177,7 @@ def _run_daily_slate_refresh(
         start_date=start_date.isoformat(),
         end_date=end_date.isoformat(),
         inserted=total_inserted,
+        updated=total_updated,
         skipped=total_skipped,
         dates=date_summaries,
         trends_inserted=total_trends_inserted,

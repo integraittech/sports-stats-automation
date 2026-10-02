@@ -49,6 +49,7 @@ class DailySlateWriteResult:
 
     written_count: int
     duplicate_count: int
+    updated_count: int = 0
 
 
 @dataclass(frozen=True)
@@ -68,8 +69,10 @@ def append_test_row() -> dict[str, Any]:
 
 def append_daily_slate_rows(
     rows: list[list[str | int | float]],
+    *,
+    update_existing: bool = False,
 ) -> DailySlateWriteResult:
-    """Append new Daily_Slate rows, skipping duplicates."""
+    """Append new rows and optionally refresh generated cells on existing rows."""
     load_dotenv()
     existing_rows = get_values(DAILY_SLATE_RANGE)
     ensure_daily_slate_headers()
@@ -81,6 +84,7 @@ def append_daily_slate_rows(
     existing_keys = set(existing_rows_by_key)
     new_rows = []
     duplicate_count = 0
+    updated_count = 0
 
     for row in rows:
         normalized_row = _normalize_daily_slate_row(row)
@@ -88,6 +92,15 @@ def append_daily_slate_rows(
         if row_key in existing_keys:
             if row_key in existing_rows_by_key:
                 row_number, existing_row = existing_rows_by_key[row_key]
+                if update_existing:
+                    # Columns AW:BA contain user-entered picks, results, and notes.
+                    # Refresh only the generated slate and stat columns A:AV.
+                    update_values_raw(
+                        f"Daily_Slate!A{row_number}:AV{row_number}",
+                        [normalized_row[:48]],
+                    )
+                    updated_count += 1
+                    continue
                 if _should_repair_start_time(existing_row, normalized_row):
                     update_values_raw(
                         f"Daily_Slate!{START_TIME_COLUMN_LETTER}{row_number}",
@@ -106,11 +119,13 @@ def append_daily_slate_rows(
         append_values_raw(DAILY_SLATE_RANGE, new_rows)
 
     print(f"Inserted {len(new_rows)} rows")
+    print(f"Updated {updated_count} rows")
     print(f"Skipped {duplicate_count} duplicates")
 
     return DailySlateWriteResult(
         written_count=len(new_rows),
         duplicate_count=duplicate_count,
+        updated_count=updated_count,
     )
 
 

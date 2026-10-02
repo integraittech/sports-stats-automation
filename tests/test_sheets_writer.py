@@ -160,6 +160,34 @@ class AppendDailySlateRowsTests(unittest.TestCase):
         append_values_raw.assert_not_called()
         update_values_raw.assert_not_called()
 
+    def test_refreshes_generated_columns_without_overwriting_user_columns(self) -> None:
+        existing_row = ["2026-10-02", "New York Rangers", "Detroit Red Wings"]
+        existing_row.extend([""] * (len(DAILY_SLATE_COLUMNS) - len(existing_row)))
+        existing_row[48:53] = ["Over 1.5", "1P Total", "Yes", "Win", "keep note"]
+        refreshed_row = ["2026-10-02", "New York Rangers", "Detroit Red Wings", "4:00 PM"]
+        refreshed_row.extend(range(44))
+
+        with (
+            patch.object(writer, "load_dotenv"),
+            patch.object(writer, "get_values", return_value=[DAILY_SLATE_COLUMNS, existing_row]),
+            patch.object(writer, "ensure_daily_slate_headers"),
+            patch.object(writer, "append_values_raw") as append_values_raw,
+            patch.object(writer, "update_values_raw") as update_values_raw,
+        ):
+            result = writer.append_daily_slate_rows(
+                [refreshed_row],
+                update_existing=True,
+            )
+
+        self.assertEqual(result.written_count, 0)
+        self.assertEqual(result.updated_count, 1)
+        self.assertEqual(result.duplicate_count, 0)
+        append_values_raw.assert_not_called()
+        update_values_raw.assert_called_once_with(
+            "Daily_Slate!A2:AV2",
+            [refreshed_row[:48]],
+        )
+
 
 class ReplacePlayoffTrendRowsTests(unittest.TestCase):
     def test_replace_playoff_trend_rows_for_dates_removes_stale_rows(self) -> None:
